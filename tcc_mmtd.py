@@ -1,5 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from scipy.sparse import csr_matrix
+
 
 def read_artists():
     cols = ['artist_id', 'artist_mbid', 'artist_name']
@@ -51,6 +53,12 @@ class PopularityRecommender:
         return recom_df.head(topn)
 
 
+def get_all_track_id(tweet_df, user_id):
+    ids = tweet_df.drop(['tweet_id', 'tweet_tweetId', 'tweet_artistId', 'tweet_count'], axis=1)
+    ids = ids.loc[ids['tweet_userId'] == user_id]
+    return ids['tweet_trackId'].tolist()
+
+
 # read the dataset files
 # Artists file
 artists = read_artists()
@@ -65,16 +73,33 @@ tweets = read_tweets()
 #print(tweets.head())
 
 # Split data between train and test dataset
-tweet_train, tweet_test = train_test_split(tweets, test_size=0.2)
+#tweet_train, tweet_test = train_test_split(tweets, test_size=0.2)
+tweet_train, tweet_test = train_test_split(tweets, test_size=0.004)
 print('Size of TRAIN dataset: ' + str(tweet_train.shape))
 print('Size of TEST dataset: ' + str(tweet_test.shape))
 
 # Popularity model - simple analysis
 popularity_model = PopularityRecommender(tweets, tracks, artists)
-
-print('Top 5 songs')
+print('-- Top 5 songs --')
 print(popularity_model.top_songs(5))
-print('Popular song recommender')
-print(popularity_model.recommend_items(['141574'], 5))
+print('--')
 
-# collaborative filtering model
+# Get the all the track id's that the user has tweeted
+#tracks_to_ignore = get_all_track_id(tweets, 367093442)
+# A list of track ids to be not recommended because the user has already tweeted
+#print('-- Popular song recommendation --')
+#print(popularity_model.recommend_items(topn=3))
+
+# Collaborative filtering model
+#cols = 'tweet_id', 'tweet_tweetId', 'tweet_userId', 'tweet_artistId', 'tweet_trackId', 'tweet_count'
+print('test tweet DF')
+tdf = tweet_test.drop(['tweet_id', 'tweet_tweetId', 'tweet_artistId'], axis=1)
+print(tdf.shape)
+
+df_features = tdf.pivot_table(
+    index='tweet_userId',
+    columns='tweet_trackId',
+    values='tweet_count').fillna(0)
+
+#print(df_features.loc[[160874621]])
+#df_features.loc[[387819972]].to_csv(r'here.csv', index=False)
